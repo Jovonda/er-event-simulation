@@ -1,5 +1,5 @@
 /* External definitions for emergency department using simlib. */
-// TEST
+
 #include "simlib.h"             /* Required for use of simlib.c. */
 #include <string.h>
 #include <time.h>
@@ -15,6 +15,7 @@
 #define AMBULANCE_SEVERITY         1.25  /* Ambulance severity multiplier */
 #define MAX_NUM_PATIENTS	        100  /* Maximum number of patients in the ER */
 #define FILENAME_LIMIT               50  /* Limit filename size */
+#define MIN_DURATION                0.1  /* Minimum duration of any process */
 
 /* Declare non-simlib global variables. */
 int    RANDOM_STREAMS[8];
@@ -114,9 +115,23 @@ int main(int argc, char** argv)  /* Main function. */
         /* Invoke the appropriate event function. */
         switch (next_event_type) {
             case EVENT_WALKIN_ARRIVAL:
+                /* Validate number of patients in the ER */
+                if (list_size[LIST_ACTIVE_PATIENTS] >= MAX_NUM_PATIENTS) {
+                    printf("PATIENT VOLUME ERROR: Patiens in ER Exceeded %d\n", MAX_NUM_PATIENTS);
+                    if (fclose(outfile) != 0) {
+                        printf("FILE ERROR: Output File \"%s\" Cannot Be Closed\n", outfile_name);
+                        exit(6);
+                    }
+                    exit(6);
+                }
                 list_file(FIRST, LIST_ACTIVE_PATIENTS);
+
+                /* Schedule next walk-in patient */
                 event_schedule(sim_time + expon(mean_walkin_interarrival, RANDOM_STREAMS[EVENT_WALKIN_ARRIVAL]),
                                EVENT_WALKIN_ARRIVAL);
+                /* Schedule patient triage */
+                event_schedule(sim_time + fmaxf(normal(mean_triage_duration, RANDOM_STREAMS[EVENT_TRIAGE_PATIENT]), MIN_DURATION), 
+                               EVENT_TRIAGE_PATIENT);
                 break;
             case EVENT_AMBULANCE_ARRIVAL:
                 

@@ -35,6 +35,7 @@ extern float expon(float mean, int stream);
 extern int   random_integer(float prob_distrib[], int stream);
 extern float uniform(float a, float b, int stream);
 extern float erlang(int m, float mean, int stream);
+extern float normal(float m, int stream);
 extern float lcgrand(int stream);
 extern void  lcgrandst(long zset, int stream);
 extern long  lcgrandgt(int stream);
