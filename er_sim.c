@@ -36,12 +36,12 @@ void report(void);
 int main(int argc, char** argv)  /* Main function. */
 {
     /* Verify correct number of arguments. */
-    if (argc != 14)
+    if (argc != 15)
     {
         printf("USAGE ERROR: Usage %s [mean_walkin_arrival] [mean_ambulance_arrival] [mean_triage_duration]\n\ 
 [mean_initial_assessment_duration] [mean_test_duration] [mean_follow_up_assessment_duration]\n\ 
 [mean_severity] [num_doctors] [num_nurses] [num_exam_rooms] [num_labs] [num_hospital_rooms]\n\ 
-[min_patients_simulated]\n", argv[0]);
+[min_patients_simulated] [output_file_name]\n", argv[0]);
         exit(1);
     }
 
@@ -65,18 +65,13 @@ int main(int argc, char** argv)  /* Main function. */
     mean_ambulance_interarrival = 1.0 / mean_ambulance_interarrival;
 
     /* Verify that outfile_name is within the FILENAME_LIMIT */
-    if (strlen(argv[1]) + strlen(argv[2]) + strlen(argv[3]) + 10
-        >= FILENAME_LIMIT)
+    if (strlen(argv[14]) + 8 >= FILENAME_LIMIT)
     {
         printf("FILENAME ERROR: Filename Too Long\n");
         exit(3);
     }
     strcpy(outfile_name, "out/");
-    strcat(outfile_name, argv[1]);
-    strcat(outfile_name, "_");
-    strcat(outfile_name, argv[2]);
-    strcat(outfile_name, "_");
-    strcat(outfile_name, argv[3]);
+    strcat(outfile_name, argv[14]);
     strcat(outfile_name, ".out");
 
     /* Open Output file. */
@@ -89,13 +84,31 @@ int main(int argc, char** argv)  /* Main function. */
     }
 
     /* Write report heading and input parameters. */
-    try_output(fprintf(outfile, "               Single base station using simlib\n"));
+    try_output(fprintf(outfile, "            Emergency Room Simulation using Simlib\n"));
     try_output(fprintf(outfile, "--------------------------------------------------------------\n\n"));
     try_output(fprintf(outfile, "[CONSTANTS]\n\n"));
-    try_output(fprintf(outfile, "Ambulance severity multiplier:%20d\n\n\n", AMBULANCE_SEVERITY));
+    try_output(fprintf(outfile, "Ambulance severity multiplier:%20f\n\n", AMBULANCE_SEVERITY));
+    try_output(fprintf(outfile, "Maximum capacity of ER:%20d\n\n", MAX_NUM_PATIENTS));
+    try_output(fprintf(outfile, "Minimum duration of any process:%20.3f\n\n\n", MIN_DURATION));
     try_output(fprintf(outfile, "[INPUT PARAMETERS]\n\n"));
     try_output(fprintf(outfile, "Mean walk-in arrival rate:%20.3f patients per minute\n\n",
             1.0/mean_walkin_interarrival));
+    try_output(fprintf(outfile, "Mean ambulance arrival rate:%20.3f patients per minute\n\n",
+            1.0/mean_ambulance_interarrival));
+    try_output(fprintf(outfile, "Mean walk-in arrival rate:%20.3f patients per minute\n\n",
+            1.0/mean_walkin_interarrival));
+    try_output(fprintf(outfile, "Mean triage duration:%20.3f minutes\n\n", mean_triage_duration));
+    try_output(fprintf(outfile, "Mean initial assessment duration:%20.3f minutes\n\n", mean_initial_assessment_duration));
+    try_output(fprintf(outfile, "Mean test duration:%20.3f minutes\n\n", mean_test_duration));
+    try_output(fprintf(outfile, "Mean follow-up assessment duration:%20.3f minutes\n\n", mean_follow_up_assessment_duration));
+    try_output(fprintf(outfile, "Mean patient severity:%20.3f\n\n", mean_severity));
+    try_output(fprintf(outfile, "Number of doctors available:%20d\n\n", num_doctors));
+    try_output(fprintf(outfile, "Number of nurses available:%20d\n\n", num_nurses));
+    try_output(fprintf(outfile, "Number of exam rooms available:%20d\n\n", num_exam_rooms));
+    try_output(fprintf(outfile, "Number of labs available:%20d\n\n", num_labs));
+    try_output(fprintf(outfile, "Number of hospital rooms available:%20d\n\n", num_hospital_rooms));
+    try_output(fprintf(outfile, "Number of patients to simulate:%20d\n\n", goal_patients_simulated));
+    
 
     /* Initialize simlib */
     init_simlib();
@@ -124,6 +137,7 @@ int main(int argc, char** argv)  /* Main function. */
                     }
                     exit(6);
                 }
+
                 list_file(FIRST, LIST_ACTIVE_PATIENTS);
 
                 /* Schedule next walk-in patient */
@@ -134,7 +148,21 @@ int main(int argc, char** argv)  /* Main function. */
                                EVENT_TRIAGE_PATIENT);
                 break;
             case EVENT_AMBULANCE_ARRIVAL:
-                
+                /* Validate number of patients in the ER */
+                if (list_size[LIST_ACTIVE_PATIENTS] >= MAX_NUM_PATIENTS) {
+                    printf("PATIENT VOLUME ERROR: Patiens in ER Exceeded %d\n", MAX_NUM_PATIENTS);
+                    if (fclose(outfile) != 0) {
+                        printf("FILE ERROR: Output File \"%s\" Cannot Be Closed\n", outfile_name);
+                        exit(6);
+                    }
+                    exit(6);
+                }
+
+                list_file(FIRST, LIST_ACTIVE_PATIENTS);
+
+                /* Schedule next walk-in patient */
+                event_schedule(sim_time + expon(mean_ambulance_interarrival, RANDOM_STREAMS[EVENT_AMBULANCE_ARRIVAL]),
+                               EVENT_AMBULANCE_ARRIVAL);
                 break;
             case EVENT_TRIAGE_PATIENT:
                 
