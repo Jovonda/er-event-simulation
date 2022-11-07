@@ -687,6 +687,15 @@ float erlang(int m, float mean, int stream)  /* Erlang variate generation
     return sum;
 }
 
+float normal(int stream)
+{
+    float a, b;
+    a = uniform(0, 1, stream);
+    b = uniform(0, 1, stream);
+
+    return (float)(sqrt(-2 * log((double)a)) * cos(2 * M_PI * (double)b));
+}
+
 
 /* Prime modulus multiplicative linear congruential generator
 

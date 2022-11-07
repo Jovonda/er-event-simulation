@@ -18,7 +18,7 @@
 
 /* Declare non-simlib global variables. */
 int    RANDOM_STREAMS[7];
-int    num_doctors, num_exam_rooms, num_nurses, num_labs, num_hospital_rooms, min_patients_simulated; 
+int    num_doctors, num_exam_rooms, num_nurses, num_labs, num_hospital_rooms, num_patients_simulated, goal_patients_simulated; 
 float  mean_walkin_interarrival, mean_ambulance_interarrival, mean_triage_duration, 
        mean_initial_assessment_duration, mean_follow_up_assessment_duration, 
        mean_test_duration, mean_severity;
@@ -57,7 +57,7 @@ int main(int argc, char** argv)  /* Main function. */
     try_input((float)(num_exam_rooms = atoi(argv[10])), argv[10]);
     try_input((float)(num_labs = atoi(argv[11])), argv[11]);
     try_input((float)(num_hospital_rooms = atoi(argv[12])), argv[12]);
-    try_input((float)(min_patients_simulated = atoi(argv[13])), argv[13]);
+    try_input((float)(goal_patients_simulated = atoi(argv[13])), argv[13]);
 
     /* Calculate mean walk-in interarrival and mean ambulance interarrival time */
     mean_walkin_interarrival = 1.0 / mean_walkin_interarrival;
@@ -113,49 +113,33 @@ int main(int argc, char** argv)  /* Main function. */
     init_model();
 
     /* Run the simulation while more calls are still needed. */
-    while (sim_time < sim_time_duration) {
+    while (num_patients_simulated < goal_patients_simulated) {
 
         /* Determine the next event. */
         timing();
 
         /* Invoke the appropriate event function. */
         switch (next_event_type) {
-            case EVENT_START_CALL:
-                if (num_open_channels > 0) {
-                    /* Add dummy struct to active channel list */
-                    list_file(FIRST, LIST_ACTIVE_CHANNELS);
-                    total_calls_connected++;
-                    num_open_channels--;
-                    /* Schedule when the call will end */
-                    event_schedule(sim_time + expon(mean_call_duration, STREAM_CALL_DURATION),
-                                   EVENT_END_CALL);
-                } else {
-                    total_calls_rejected++;
-                }
-                /* Schedule next new call */
-                event_schedule(sim_time + expon(mean_call_interarrival, STREAM_CALL_INTERARRIVAL),
-                               EVENT_START_CALL);
+            case EVENT_WALKIN_ARRIVAL:
+                event_schedule(sim_time + )
                 break;
-            case EVENT_HANDOFF_CALL:
-                if (num_open_channels > 0) {
-                    /* Add dummy struct to active channel list */
-                    list_file(FIRST, LIST_ACTIVE_CHANNELS);
-                    total_handoffs_connected++;
-                    num_open_channels--;
-                    /* Schedule when the call will end */
-                    event_schedule(sim_time + expon(mean_call_duration, STREAM_CALL_DURATION),
-                                   EVENT_END_CALL);
-                } else {
-                    total_handoffs_rejected++;
-                }
-                /* Schedule next handoff call */
-                event_schedule(sim_time + expon(mean_handoff_interarrival, STREAM_HANDOFF_INTERARRIVAL),
-                               EVENT_HANDOFF_CALL);
+            case EVENT_AMBULANCE_ARRIVAL:
+                
                 break;
-            case EVENT_END_CALL:
-                /* Remove dummy struct from active channel list */
-                list_remove(FIRST, LIST_ACTIVE_CHANNELS);
-                num_open_channels++;
+            case EVENT_TRIAGE_PATIENT:
+                
+                break;
+            case EVENT_INITIAL_ASSESMENT:
+                
+                break;
+            case EVENT_RUN_TESTS:
+                
+                break;
+            case EVENT_FOLLOW_UP_ASSESSMENT:
+                
+                break;
+            case EVENT_PATIENT_ADMITTANCE:
+                
                 break;
         }
     }
