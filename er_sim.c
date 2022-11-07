@@ -17,7 +17,7 @@
 #define FILENAME_LIMIT               50  /* Limit filename size */
 
 /* Declare non-simlib global variables. */
-int    RANDOM_STREAMS[7];
+int    RANDOM_STREAMS[8];
 int    num_doctors, num_exam_rooms, num_nurses, num_labs, num_hospital_rooms, num_patients_simulated, goal_patients_simulated; 
 float  mean_walkin_interarrival, mean_ambulance_interarrival, mean_triage_duration, 
        mean_initial_assessment_duration, mean_follow_up_assessment_duration, 
@@ -95,13 +95,6 @@ int main(int argc, char** argv)  /* Main function. */
     try_output(fprintf(outfile, "[INPUT PARAMETERS]\n\n"));
     try_output(fprintf(outfile, "Mean walk-in arrival rate:%20.3f patients per minute\n\n",
             1.0/mean_walkin_interarrival));
-    try_output(fprintf(outfile, "Mean ambulance arriaval rate:%12.3f patients per minute\n\n", 
-            1.0/mean_ambulance_interarrival));
-    try_output(fprintf(outfile, "Mean triage duration:%13.3f minutes\n\n", 
-            1.0/mean_call_duration));
-    try_output(fprintf(outfile, "Minimum simulation duration:%15.3d seconds\n\n", sim_time_duration));
-    try_output(fprintf(outfile, "Mean traffic load:%25.3f\n\n\n", 
-            (1.0/mean_call_interarrival + 1.0/mean_handoff_interarrival)/(MAX_CHANNELS*(1.0/mean_call_duration))));
 
     /* Initialize simlib */
     init_simlib();
@@ -121,7 +114,9 @@ int main(int argc, char** argv)  /* Main function. */
         /* Invoke the appropriate event function. */
         switch (next_event_type) {
             case EVENT_WALKIN_ARRIVAL:
-                event_schedule(sim_time + )
+                list_file(FIRST, LIST_ACTIVE_PATIENTS);
+                event_schedule(sim_time + expon(mean_walkin_interarrival, RANDOM_STREAMS[EVENT_WALKIN_ARRIVAL]),
+                               EVENT_WALKIN_ARRIVAL);
                 break;
             case EVENT_AMBULANCE_ARRIVAL:
                 
@@ -139,7 +134,7 @@ int main(int argc, char** argv)  /* Main function. */
                 
                 break;
             case EVENT_PATIENT_ADMITTANCE:
-                
+
                 break;
         }
     }
@@ -160,40 +155,39 @@ int main(int argc, char** argv)  /* Main function. */
 void init_model(void)  /* Initialization function. */
 {
     /* Initialize non-simlib variables */
-    num_open_channels = MAX_CHANNELS;
-    total_calls_connected = 0;
-    total_calls_rejected = 0;
-    total_handoffs_connected = 0;
-    total_handoffs_rejected = 0;
 
     /* Initialize random number streams */
     seconds = time(NULL);
-    STREAM_CALL_INTERARRIVAL = 1 * seconds % 60;
-    STREAM_HANDOFF_INTERARRIVAL = 2 * seconds % 60;
-    STREAM_CALL_DURATION = 3 * seconds % 60;
+    RANDOM_STREAMS[1] = 2 * seconds % 60;
+    RANDOM_STREAMS[2] = 3 * seconds % 60;
+    RANDOM_STREAMS[3] = 5 * seconds % 60;
+    RANDOM_STREAMS[4] = 7 * seconds % 60;
+    RANDOM_STREAMS[5] = 11 * seconds % 60;
+    RANDOM_STREAMS[6] = 13 * seconds % 60;
+    RANDOM_STREAMS[7] = 17 * seconds % 60;
     
     /* Schedule first new call and first handoff call */
-    event_schedule(sim_time + expon(mean_call_interarrival, STREAM_CALL_INTERARRIVAL),
-                   EVENT_START_CALL);
-    event_schedule(sim_time + expon(mean_handoff_interarrival, STREAM_HANDOFF_INTERARRIVAL),
-                   EVENT_HANDOFF_CALL);
+    event_schedule(sim_time + expon(mean_walkin_interarrival, RANDOM_STREAMS[EVENT_WALKIN_ARRIVAL]),
+                   EVENT_WALKIN_ARRIVAL);
+    event_schedule(sim_time + expon(mean_ambulance_interarrival, RANDOM_STREAMS[EVENT_AMBULANCE_ARRIVAL]),
+                   EVENT_AMBULANCE_ARRIVAL);
 }
 
 
 void report(void)  /* Report generator function. */
 {
     /* Get and write out estimates of desired measures of performance. */
-    try_output(fprintf(outfile, "[PERFORMANCE METRICS]\n"));
-    try_output(fprintf(outfile, "\nBase Station Channel Utilization:%10.1f%%\n", 
-               100.0 * filest(LIST_ACTIVE_CHANNELS) / MAX_CHANNELS));
-    try_output(fprintf(outfile, "\n(New) Call Block Probability:%14.1f%%\n", 
-               100.0 * total_calls_rejected / (total_calls_connected + total_calls_rejected)));
-    try_output(fprintf(outfile, "\nHandoff Dropping Probability:%14.1f%%\n\n", 
-               100.0 * total_handoffs_rejected / (total_handoffs_connected + total_handoffs_rejected)));
-    try_output(fprintf(outfile, "\n[TERMINATION METRICS]\n"));
-    try_output(fprintf(outfile, "\nTime simulation ended:%21.3f seconds\n", sim_time));
-    try_output(fprintf(outfile, "\nTotal calls simulated:%21d calls\n", 
-               total_calls_connected + total_calls_rejected + total_handoffs_connected + total_handoffs_rejected));
+    // try_output(fprintf(outfile, "[PERFORMANCE METRICS]\n"));
+    // try_output(fprintf(outfile, "\nBase Station Channel Utilization:%10.1f%%\n", 
+    //            100.0 * filest(LIST_ACTIVE_CHANNELS) / MAX_CHANNELS));
+    // try_output(fprintf(outfile, "\n(New) Call Block Probability:%14.1f%%\n", 
+    //            100.0 * total_calls_rejected / (total_calls_connected + total_calls_rejected)));
+    // try_output(fprintf(outfile, "\nHandoff Dropping Probability:%14.1f%%\n\n", 
+    //            100.0 * total_handoffs_rejected / (total_handoffs_connected + total_handoffs_rejected)));
+    // try_output(fprintf(outfile, "\n[TERMINATION METRICS]\n"));
+    // try_output(fprintf(outfile, "\nTime simulation ended:%21.3f seconds\n", sim_time));
+    // try_output(fprintf(outfile, "\nTotal calls simulated:%21d calls\n", 
+    //            total_calls_connected + total_calls_rejected + total_handoffs_connected + total_handoffs_rejected));
 }
 
 void try_input(float input, char* input_str) /* Validate input or exit */
