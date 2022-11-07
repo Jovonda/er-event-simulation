@@ -91,12 +91,12 @@ int main(int argc, char** argv)  /* Main function. */
     try_output(fprintf(outfile, "               Single base station using simlib\n"));
     try_output(fprintf(outfile, "--------------------------------------------------------------\n\n"));
     try_output(fprintf(outfile, "[CONSTANTS]\n\n"));
-    try_output(fprintf(outfile, "Max number of channels:%20d\n\n\n", MAX_CHANNELS));
+    try_output(fprintf(outfile, "Ambulance severity multiplier:%20d\n\n\n", AMBULANCE_SEVERITY));
     try_output(fprintf(outfile, "[INPUT PARAMETERS]\n\n"));
-    try_output(fprintf(outfile, "Mean call arrival time:%20.3f calls per second\n\n",
-            1.0/mean_call_interarrival));
-    try_output(fprintf(outfile, "Mean call handoff arrival time:%12.3f calls per second\n\n", 
-            1.0/mean_handoff_interarrival));
+    try_output(fprintf(outfile, "Mean walk-in arrival rate:%20.3f patients per minute\n\n",
+            1.0/mean_walkin_interarrival));
+    try_output(fprintf(outfile, "Mean ambulance arriaval rate:%12.3f patients per minute\n\n", 
+            1.0/mean_ambulance_interarrival));
     try_output(fprintf(outfile, "Mean service rate per channel:%13.3f calls per second\n\n", 
             1.0/mean_call_duration));
     try_output(fprintf(outfile, "Minimum simulation duration:%15.3d seconds\n\n", sim_time_duration));
