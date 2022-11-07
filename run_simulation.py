@@ -1,9 +1,9 @@
 #!/usr/bin/python3
 import subprocess
 
-INPUTFILE = "base_station.in"
-NUMARGS = 4
-SIMPROGRAM = "build/base_station"
+INPUTFILE = "er_sim.in"
+NUMARGS = 13
+SIMPROGRAM = "build/er_sim"
 
 simulations = []
 with open(INPUTFILE, "r") as inputfile:

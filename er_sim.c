@@ -1,21 +1,27 @@
-/* External definitions for single base station using simlib. */
+/* External definitions for emergency department using simlib. */
 
 #include "simlib.h"             /* Required for use of simlib.c. */
 #include <string.h>
 #include <time.h>
 
-#define EVENT_START_CALL              1  /* Event type starting calls */
-#define EVENT_HANDOFF_CALL            2  /* Event type for handing off calls */
-#define EVENT_END_CALL                3  /* Event type for ending calls */
-#define LIST_ACTIVE_CHANNELS          1  /* List number for tracking active channels */
-#define MAX_CHANNELS                100  /* Maximum channels per base station */
+#define EVENT_WALKIN_ARRIVAL          1  /* Event type walkin arrival */
+#define EVENT_AMBULANCE_ARRIVAL       2  /* Event type ambulance arrival */
+#define EVENT_TRIAGE_PATIENT          3  /* Event type triage patient */
+#define EVENT_INITIAL_ASSESMENT       4  /* Event type intial assesment */
+#define EVENT_RUN_TESTS               5  /* Event type run tests */
+#define EVENT_FOLLOW_UP_ASSESSMENT    6  /* Event type follow-up assessment */
+#define EVENT_PATIENT_ADMITTANCE      7  /* Event type patient admittance */
+#define LIST_ACTIVE_PATIENTS          1  /* List number for tracking active patients */
+#define AMBULANCE_SEVERITY         1.25  /* Ambulance severity multiplier */
+#define MAX_NUM_PATIENTS	        100  /* Maximum number of patients in the ER */
 #define FILENAME_LIMIT               50  /* Limit filename size */
 
 /* Declare non-simlib global variables. */
-int    STREAM_CALL_INTERARRIVAL, STREAM_CALL_DURATION, STREAM_HANDOFF_INTERARRIVAL;
-int    num_open_channels, total_calls_connected, total_calls_rejected,
-       total_handoffs_connected, total_handoffs_rejected, sim_time_duration;
-float  mean_call_interarrival, mean_handoff_interarrival, mean_call_duration;
+int    RANDOM_STREAMS[7];
+int    num_doctors, num_exam_rooms, num_nurses, num_labs, num_hospital_rooms, min_patients_simulated; 
+float  mean_walkin_interarrival, mean_ambulance_interarrival, mean_triage_duration, 
+       mean_initial_assessment_duration, mean_follow_up_assessment_duration, 
+       mean_test_duration, mean_severity;
 FILE   *outfile;
 char   outfile_name[FILENAME_LIMIT];
 time_t seconds;
@@ -29,22 +35,33 @@ void report(void);
 int main(int argc, char** argv)  /* Main function. */
 {
     /* Verify correct number of arguments. */
-    if (argc != 5)
+    if (argc != 14)
     {
-        printf("USAGE ERROR: Usage %s [mean_call_arrival] [mean_handoff_arrival] [mean_service_rate] [sim_time_duration]\n", argv[0]);
+        printf("USAGE ERROR: Usage %s [mean_walkin_arrival] [mean_ambulance_arrival] [mean_triage_duration]\n\ 
+[mean_initial_assessment_duration] [mean_test_duration] [mean_follow_up_assessment_duration]\n\ 
+[mean_severity] [num_doctors] [num_nurses] [num_exam_rooms] [num_labs] [num_hospital_rooms]\n\ 
+[min_patients_simulated]\n", argv[0]);
         exit(1);
     }
 
     /* Read and validate input parameters. */
-    try_input(mean_call_interarrival = atof(argv[1]), argv[1]);
-    try_input(mean_handoff_interarrival = atof(argv[2]), argv[2]);
-    try_input(mean_call_duration = atof(argv[3]), argv[3]);
-    try_input(sim_time_duration = atof(argv[4]), argv[4]);
+    try_input(mean_walkin_interarrival = atof(argv[1]), argv[1]);
+    try_input(mean_ambulance_interarrival = atof(argv[2]), argv[2]);
+    try_input(mean_triage_duration = atof(argv[3]), argv[3]);
+    try_input(mean_initial_assessment_duration = atof(argv[4]), argv[4]);
+    try_input(mean_test_duration = atof(argv[5]), argv[5]);
+    try_input(mean_follow_up_assessment_duration = atof(argv[6]), argv[6]);
+    try_input(mean_severity = atof(argv[7]), argv[7]);
+    try_input((float)(num_doctors = atoi(argv[8])), argv[8]);
+    try_input((float)(num_nurses = atoi(argv[9])), argv[9]);
+    try_input((float)(num_exam_rooms = atoi(argv[10])), argv[10]);
+    try_input((float)(num_labs = atoi(argv[11])), argv[11]);
+    try_input((float)(num_hospital_rooms = atoi(argv[12])), argv[12]);
+    try_input((float)(min_patients_simulated = atoi(argv[13])), argv[13]);
 
-    /* Calculate mean call interarrival and call duration times */
-    mean_call_interarrival = 1.0 / mean_call_interarrival;
-    mean_handoff_interarrival = 1.0 / mean_handoff_interarrival;
-    mean_call_duration = 1.0 / mean_call_duration;
+    /* Calculate mean walk-in interarrival and mean ambulance interarrival time */
+    mean_walkin_interarrival = 1.0 / mean_walkin_interarrival;
+    mean_ambulance_interarrival = 1.0 / mean_ambulance_interarrival;
 
     /* Verify that outfile_name is within the FILENAME_LIMIT */
     if (strlen(argv[1]) + strlen(argv[2]) + strlen(argv[3]) + 10
