@@ -1,5 +1,5 @@
 /* External definitions for emergency department using simlib. */
-
+// TEST
 #include "simlib.h"             /* Required for use of simlib.c. */
 #include <string.h>
 #include <time.h>
@@ -97,7 +97,7 @@ int main(int argc, char** argv)  /* Main function. */
             1.0/mean_walkin_interarrival));
     try_output(fprintf(outfile, "Mean ambulance arriaval rate:%12.3f patients per minute\n\n", 
             1.0/mean_ambulance_interarrival));
-    try_output(fprintf(outfile, "Mean service rate per channel:%13.3f calls per second\n\n", 
+    try_output(fprintf(outfile, "Mean triage duration:%13.3f minutes\n\n", 
             1.0/mean_call_duration));
     try_output(fprintf(outfile, "Minimum simulation duration:%15.3d seconds\n\n", sim_time_duration));
     try_output(fprintf(outfile, "Mean traffic load:%25.3f\n\n\n", 
