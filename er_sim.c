@@ -20,8 +20,8 @@
 #define MIN_DURATION                0.1  /* Minimum duration of any process */
 
 /* Declare non-simlib global variables. */
-int    RANDOM_STREAMS[8];
-int    num_doctors, num_exam_rooms, num_nurses, num_labs, num_hospital_rooms, num_patients_simulated, goal_patients_simulated; 
+int    RANDOM_STREAMS[8], num_patients_simulated;
+int    num_doctors, num_exam_rooms, num_nurses, num_labs, num_hospital_rooms, goal_patients_simulated; 
 float  mean_walkin_interarrival, mean_ambulance_interarrival, mean_triage_duration, 
        mean_initial_assessment_duration, mean_follow_up_assessment_duration, 
        mean_test_duration, mean_severity;
@@ -99,8 +99,6 @@ int main(int argc, char** argv)  /* Main function. */
             1.0/mean_walkin_interarrival));
     try_output(fprintf(outfile, "Mean ambulance arrival rate:%20.3f patients per minute\n\n",
             1.0/mean_ambulance_interarrival));
-    try_output(fprintf(outfile, "Mean walk-in arrival rate:%20.3f patients per minute\n\n",
-            1.0/mean_walkin_interarrival));
     try_output(fprintf(outfile, "Mean triage duration:%20.3f minutes\n\n", mean_triage_duration));
     try_output(fprintf(outfile, "Mean initial assessment duration:%20.3f minutes\n\n", mean_initial_assessment_duration));
     try_output(fprintf(outfile, "Mean test duration:%20.3f minutes\n\n", mean_test_duration));
@@ -111,7 +109,7 @@ int main(int argc, char** argv)  /* Main function. */
     try_output(fprintf(outfile, "Number of exam rooms available:%20d\n\n", num_exam_rooms));
     try_output(fprintf(outfile, "Number of labs available:%20d\n\n", num_labs));
     try_output(fprintf(outfile, "Number of hospital rooms available:%20d\n\n", num_hospital_rooms));
-    try_output(fprintf(outfile, "Number of patients to simulate:%20d\n\n", goal_patients_simulated));
+    try_output(fprintf(outfile, "Number of patients to simulate:%20d\n\n\n", goal_patients_simulated));
     
 
     /* Initialize simlib */
@@ -132,53 +130,66 @@ int main(int argc, char** argv)  /* Main function. */
         /* Invoke the appropriate event function. */
         switch (next_event_type) {
             case EVENT_WALKIN_ARRIVAL:
+                /* Add patient to list of active patients */
+                list_file(FIRST, LIST_ACTIVE_PATIENTS);
+                
                 /* Validate number of patients in the ER */
                 if (list_size[LIST_ACTIVE_PATIENTS] >= MAX_NUM_PATIENTS) 
                 {
                     sprintf(error_msg, "PATIENT VOLUME ERROR: Patients In ER Exceeded %d\n", MAX_NUM_PATIENTS);
                     catch_exception(error_msg, 6);
                 }
-                
-                /* Add patient to list of active patients */
-                list_file(FIRST, LIST_ACTIVE_PATIENTS);
 
                 /* Schedule next walk-in patient */
                 event_schedule(sim_time + expon(mean_walkin_interarrival, RANDOM_STREAMS[EVENT_WALKIN_ARRIVAL]),
                                EVENT_WALKIN_ARRIVAL);
-                /* Schedule patient triage */
-                event_schedule(sim_time + fmaxf(normal(mean_triage_duration, RANDOM_STREAMS[EVENT_TRIAGE_PATIENT]), MIN_DURATION), 
-                               EVENT_TRIAGE_PATIENT);
-                break;
-            case EVENT_AMBULANCE_ARRIVAL:
-                /* Validate number of patients in the ER */
-                if (list_size[LIST_ACTIVE_PATIENTS] >= MAX_NUM_PATIENTS) 
-                {
-                    sprintf(error_msg, "PATIENT VOLUME ERROR: Patients In ER Exceeded %d\n", MAX_NUM_PATIENTS);
-                    catch_exception(error_msg, 6);
-                }
-
-                /* Add patient to list of active patients */
-                list_file(FIRST, LIST_ACTIVE_PATIENTS);
-
-                /* Schedule next walk-in patient */
-                event_schedule(sim_time + expon(mean_ambulance_interarrival, RANDOM_STREAMS[EVENT_AMBULANCE_ARRIVAL]),
-                               EVENT_AMBULANCE_ARRIVAL);
                 
+
                 /* Add nurse to list of active nurses */
                 list_file(FIRST, LIST_ACTIVE_NURSES);
-                
-                /* Schedule patient triage */
-                event_schedule(sim_time + fmaxf(normal(mean_triage_duration, RANDOM_STREAMS[EVENT_TRIAGE_PATIENT]), MIN_DURATION), 
-                               EVENT_TRIAGE_PATIENT);
-                break;
-            case EVENT_TRIAGE_PATIENT:
+
                 /* Validate number of nurses in the ER */
                 if (list_size[LIST_ACTIVE_NURSES] >= num_nurses)
                 {
                     sprintf(error_msg, "NURSE ERROR: Number Of Active Nurses Exceeded %d\n", num_nurses);
                     catch_exception(error_msg, 7);
                 }
+                
+                /* Schedule patient triage */
+                event_schedule(sim_time + fmaxf(normal(mean_triage_duration, RANDOM_STREAMS[EVENT_TRIAGE_PATIENT]), MIN_DURATION), 
+                               EVENT_TRIAGE_PATIENT);
+                break;
+            case EVENT_AMBULANCE_ARRIVAL:
+                /* Add patient to list of active patients */
+                list_file(FIRST, LIST_ACTIVE_PATIENTS);
+                
+                /* Validate number of patients in the ER */
+                if (list_size[LIST_ACTIVE_PATIENTS] >= MAX_NUM_PATIENTS) 
+                {
+                    sprintf(error_msg, "PATIENT VOLUME ERROR: Patients In ER Exceeded %d\n", MAX_NUM_PATIENTS);
+                    catch_exception(error_msg, 6);
+                }
+                
+                /* Schedule next ambulance patient */
+                event_schedule(sim_time + expon(mean_ambulance_interarrival, RANDOM_STREAMS[EVENT_AMBULANCE_ARRIVAL]),
+                               EVENT_AMBULANCE_ARRIVAL);
 
+
+                /* Add nurse to list of active nurses */
+                list_file(FIRST, LIST_ACTIVE_NURSES);
+
+                /* Validate number of nurses in the ER */
+                if (list_size[LIST_ACTIVE_NURSES] >= num_nurses)
+                {
+                    sprintf(error_msg, "NURSE ERROR: Number Of Active Nurses Exceeded %d\n", num_nurses);
+                    catch_exception(error_msg, 7);
+                }
+                
+                /* Schedule patient triage */
+                event_schedule(sim_time + fmaxf(normal(mean_triage_duration, RANDOM_STREAMS[EVENT_TRIAGE_PATIENT]), MIN_DURATION), 
+                               EVENT_TRIAGE_PATIENT);
+                break;
+            case EVENT_TRIAGE_PATIENT:
                 /* Remove nurse from list of active nurses */
                 list_remove(FIRST, LIST_ACTIVE_NURSES);
 
@@ -190,7 +201,8 @@ int main(int argc, char** argv)  /* Main function. */
                                EVENT_INITIAL_ASSESMENT);
                 break;
             case EVENT_INITIAL_ASSESMENT:
-                
+                list_remove(FIRST, LIST_ACTIVE_PATIENTS);
+                num_patients_simulated++;
                 break;
             case EVENT_RUN_TESTS:
                 
@@ -220,6 +232,7 @@ int main(int argc, char** argv)  /* Main function. */
 void init_model(void)  /* Initialization function. */
 {
     /* Initialize non-simlib variables */
+    num_patients_simulated = 0;
 
     /* Initialize random number streams */
     seconds = time(NULL);
@@ -242,11 +255,11 @@ void init_model(void)  /* Initialization function. */
 void report(void)  /* Report generator function. */
 {
     /* Get and write out estimates of desired measures of performance. */
-    // try_output(fprintf(outfile, "[PERFORMANCE METRICS]\n"));
-    // try_output(fprintf(outfile, "\nBase Station Channel Utilization:%10.1f%%\n", 
-    //            100.0 * filest(LIST_ACTIVE_CHANNELS) / MAX_CHANNELS));
-    // try_output(fprintf(outfile, "\n(New) Call Block Probability:%14.1f%%\n", 
-    //            100.0 * total_calls_rejected / (total_calls_connected + total_calls_rejected)));
+    try_output(fprintf(outfile, "[PERFORMANCE METRICS]\n"));
+    try_output(fprintf(outfile, "\nAverage Number of Active Patients:%10.1f\n", 
+               filest(LIST_ACTIVE_PATIENTS)));
+    try_output(fprintf(outfile, "\nNurse Utilization:%14.1f%%\n", 
+               100.0 * filest(LIST_ACTIVE_NURSES) / num_nurses));
     // try_output(fprintf(outfile, "\nHandoff Dropping Probability:%14.1f%%\n\n", 
     //            100.0 * total_handoffs_rejected / (total_handoffs_connected + total_handoffs_rejected)));
     // try_output(fprintf(outfile, "\n[TERMINATION METRICS]\n"));
