@@ -12,6 +12,8 @@
 #define EVENT_FOLLOW_UP_ASSESSMENT    6  /* Event type follow-up assessment */
 #define EVENT_PATIENT_ADMITTANCE      7  /* Event type patient admittance */
 #define LIST_ACTIVE_PATIENTS          1  /* List number for tracking active patients */
+#define LIST_ACTIVE_NURSES            2  /* List number for tracking active nurses */
+#define LIST_ACTIVE_DOCTORS           3  /* List number for tracking active doctors */
 #define AMBULANCE_SEVERITY         1.25  /* Ambulance severity multiplier */
 #define MAX_NUM_PATIENTS	        100  /* Maximum number of patients in the ER */
 #define FILENAME_LIMIT               50  /* Limit filename size */
@@ -23,14 +25,16 @@ int    num_doctors, num_exam_rooms, num_nurses, num_labs, num_hospital_rooms, nu
 float  mean_walkin_interarrival, mean_ambulance_interarrival, mean_triage_duration, 
        mean_initial_assessment_duration, mean_follow_up_assessment_duration, 
        mean_test_duration, mean_severity;
-FILE   *outfile;
+FILE*  outfile;
 char   outfile_name[FILENAME_LIMIT];
+char   error_msg[100];
 time_t seconds;
 
 /* Declare non-simlib functions. */
 void try_input(float, char*);
 void try_output(int);
 void init_model(void);
+void catch_exception(char*, int);
 void report(void);
 
 int main(int argc, char** argv)  /* Main function. */
@@ -129,15 +133,13 @@ int main(int argc, char** argv)  /* Main function. */
         switch (next_event_type) {
             case EVENT_WALKIN_ARRIVAL:
                 /* Validate number of patients in the ER */
-                if (list_size[LIST_ACTIVE_PATIENTS] >= MAX_NUM_PATIENTS) {
-                    printf("PATIENT VOLUME ERROR: Patiens in ER Exceeded %d\n", MAX_NUM_PATIENTS);
-                    if (fclose(outfile) != 0) {
-                        printf("FILE ERROR: Output File \"%s\" Cannot Be Closed\n", outfile_name);
-                        exit(6);
-                    }
-                    exit(6);
+                if (list_size[LIST_ACTIVE_PATIENTS] >= MAX_NUM_PATIENTS) 
+                {
+                    sprintf(error_msg, "PATIENT VOLUME ERROR: Patients In ER Exceeded %d\n", MAX_NUM_PATIENTS);
+                    catch_exception(error_msg, 6);
                 }
-
+                
+                /* Add patient to list of active patients */
                 list_file(FIRST, LIST_ACTIVE_PATIENTS);
 
                 /* Schedule next walk-in patient */
@@ -149,23 +151,43 @@ int main(int argc, char** argv)  /* Main function. */
                 break;
             case EVENT_AMBULANCE_ARRIVAL:
                 /* Validate number of patients in the ER */
-                if (list_size[LIST_ACTIVE_PATIENTS] >= MAX_NUM_PATIENTS) {
-                    printf("PATIENT VOLUME ERROR: Patiens in ER Exceeded %d\n", MAX_NUM_PATIENTS);
-                    if (fclose(outfile) != 0) {
-                        printf("FILE ERROR: Output File \"%s\" Cannot Be Closed\n", outfile_name);
-                        exit(6);
-                    }
-                    exit(6);
+                if (list_size[LIST_ACTIVE_PATIENTS] >= MAX_NUM_PATIENTS) 
+                {
+                    sprintf(error_msg, "PATIENT VOLUME ERROR: Patients In ER Exceeded %d\n", MAX_NUM_PATIENTS);
+                    catch_exception(error_msg, 6);
                 }
 
+                /* Add patient to list of active patients */
                 list_file(FIRST, LIST_ACTIVE_PATIENTS);
 
                 /* Schedule next walk-in patient */
                 event_schedule(sim_time + expon(mean_ambulance_interarrival, RANDOM_STREAMS[EVENT_AMBULANCE_ARRIVAL]),
                                EVENT_AMBULANCE_ARRIVAL);
+                
+                /* Add nurse to list of active nurses */
+                list_file(FIRST, LIST_ACTIVE_NURSES);
+                
+                /* Schedule patient triage */
+                event_schedule(sim_time + fmaxf(normal(mean_triage_duration, RANDOM_STREAMS[EVENT_TRIAGE_PATIENT]), MIN_DURATION), 
+                               EVENT_TRIAGE_PATIENT);
                 break;
             case EVENT_TRIAGE_PATIENT:
-                
+                /* Validate number of nurses in the ER */
+                if (list_size[LIST_ACTIVE_NURSES] >= num_nurses)
+                {
+                    sprintf(error_msg, "NURSE ERROR: Number Of Active Nurses Exceeded %d\n", num_nurses);
+                    catch_exception(error_msg, 7);
+                }
+
+                /* Remove nurse from list of active nurses */
+                list_remove(FIRST, LIST_ACTIVE_NURSES);
+
+                /* Add doctor to list of active doctors */
+                list_file(FIRST, LIST_ACTIVE_DOCTORS);
+
+                /* Schedule patient's initial assessment */
+                event_schedule(sim_time + fmaxf(normal(mean_initial_assessment_duration, RANDOM_STREAMS[EVENT_INITIAL_ASSESMENT]), MIN_DURATION),
+                               EVENT_INITIAL_ASSESMENT);
                 break;
             case EVENT_INITIAL_ASSESMENT:
                 
@@ -253,5 +275,15 @@ void try_output(int status) /* Validate output or exit */
         }
         exit(5);
     }
+}
+
+void catch_exception(char* error_msg, int error_type) /* General exception printer */
+{
+    printf("%s", error_msg);
+    if (fclose(outfile) != 0)
+    {
+        printf("FILE ERROR: Output File \"%s\" Cannot Be Closed\n", outfile_name);
+    }
+    exit(error_type);
 }
 
