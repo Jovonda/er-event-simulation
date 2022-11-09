@@ -17,11 +17,10 @@
 #define LIST_ACTIVE_EXAM_ROOMS        4  /* List number for tracking active exam rooms */
 #define LIST_ACTIVE_LABS              5  /* List number for tracking active labs */
 #define LIST_ACTIVE_HOSPITAL_ROOMS    6  /* List number for tracking active hospital rooms */
-#define AMBULANCE_SEVERITY         1.25  /* Ambulance severity multiplier */
 #define MAX_NUM_PATIENTS	        100  /* Maximum number of patients in the ER */
 #define FILENAME_LIMIT               50  /* Limit filename size */
 #define MIN_DURATION                0.1  /* Minimum duration of any process */
-#define TRESHOLD_SEVERITY             4  /* Sets the level of severity to be seen immediately */
+#define THRESHOLD_SEVERITY            4  /* Sets the level of severity to be seen immediately */
 
 /* Declare non-simlib global variables. */
 int    RANDOM_STREAMS[8], num_patients_simulated;
@@ -106,9 +105,10 @@ int main(int argc, char** argv)  /* Main function. */
     try_output(fprintf(outfile, "            Emergency Room Simulation using Simlib\n"));
     try_output(fprintf(outfile, "--------------------------------------------------------------\n\n"));
     try_output(fprintf(outfile, "[CONSTANTS]\n\n"));
-    try_output(fprintf(outfile, "Ambulance severity multiplier:%20.3f\n\n", AMBULANCE_SEVERITY));
-    try_output(fprintf(outfile, "Maximum capacity of ER:%27d\n\n", MAX_NUM_PATIENTS));
-    try_output(fprintf(outfile, "Minimum duration of any process:%18.3f\n\n\n", MIN_DURATION));
+    try_output(fprintf(outfile, "Maximum capacity of patients:%21d patients\n\n", MAX_NUM_PATIENTS));
+    try_output(fprintf(outfile, "Maximum length of filename:%23d characters\n\n", FILENAME_LIMIT));
+    try_output(fprintf(outfile, "Minimum duration of any process:%18.3f minutes\n\n", MIN_DURATION));
+    try_output(fprintf(outfile, "Severity threshold for immediate action:%10d\n\n\n", THRESHOLD_SEVERITY));
     try_output(fprintf(outfile, "[INPUT PARAMETERS]\n\n"));
     try_output(fprintf(outfile, "Mean walk-in arrival rate:%24.3f patients per minute\n\n",
             1.0/mean_walkin_interarrival));
@@ -232,7 +232,7 @@ int main(int argc, char** argv)  /* Main function. */
 
                 /* Generate patient severity to determine if they will be seen immediately */
                 severity = normal(mean_severity, RANDOM_STREAMS[EVENT_TRIAGE_PATIENT]);
-                if (severity < TRESHOLD_SEVERITY)
+                if (severity < THRESHOLD_SEVERITY)
                 {
                     /* Schedule patient's initial assessment */
                     event_schedule(sim_time + fmaxf(normal(mean_initial_assessment_duration, RANDOM_STREAMS[EVENT_INITIAL_ASSESMENT]), MIN_DURATION),
