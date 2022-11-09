@@ -10,7 +10,7 @@
 #define EVENT_INITIAL_ASSESMENT       4  /* Event type intial assesment */
 #define EVENT_RUN_TESTS               5  /* Event type run tests */
 #define EVENT_FOLLOW_UP_ASSESSMENT    6  /* Event type follow-up assessment */
-#define EVENT_PATIENT_ADMITTANCE      7  /* Event type patient admittance */
+#define EVENT_PATIENT_DISCHARGE       7  /* Event type patient discharge */
 #define LIST_ACTIVE_PATIENTS          1  /* List number for tracking active patients */
 #define LIST_ACTIVE_NURSES            2  /* List number for tracking active nurses */
 #define LIST_ACTIVE_DOCTORS           3  /* List number for tracking active doctors */
@@ -141,7 +141,6 @@ int main(int argc, char** argv)  /* Main function. */
 
         /* Determine the next event. */
         timing();
-
         /* Invoke the appropriate event function. */
         switch (next_event_type) {
             case EVENT_WALKIN_ARRIVAL:
@@ -235,8 +234,8 @@ int main(int argc, char** argv)  /* Main function. */
                     /* Schedule patient's initial assessment */
                     event_schedule(sim_time + fmaxf(normal(mean_initial_assessment_duration, RANDOM_STREAMS[EVENT_INITIAL_ASSESMENT]), MIN_DURATION),
                                 EVENT_INITIAL_ASSESMENT);
+                    break;
                 }
-
                 /* Schedule patient's initial assessment immediately */
                 event_schedule(sim_time + MIN_DURATION,
                                EVENT_INITIAL_ASSESMENT);
@@ -299,10 +298,11 @@ int main(int argc, char** argv)  /* Main function. */
                     }
 
                     /* Schedule patient addmittance to hospital */
-                    event_schedule(sim_time + fmaxf(normal(mean_hospital_duration, RANDOM_STREAMS[EVENT_PATIENT_ADMITTANCE]), MIN_DURATION),
-                               EVENT_PATIENT_ADMITTANCE);
+                    event_schedule(sim_time + fmaxf(normal(mean_hospital_duration, RANDOM_STREAMS[EVENT_PATIENT_DISCHARGE]), MIN_DURATION),
+                               EVENT_PATIENT_DISCHARGE);
+                    break;
                 }
-                else if (random_var - addmittance_chance <= specialist_chance)
+                if (random_var - addmittance_chance <= specialist_chance)
                 {
                     /* Add doctor to list of active doctors */
                     list_file(FIRST, LIST_ACTIVE_DOCTORS);
@@ -327,6 +327,7 @@ int main(int argc, char** argv)  /* Main function. */
                     /* Schedule patient's specialist initial assessment */
                     event_schedule(sim_time + fmaxf(normal(mean_initial_assessment_duration, RANDOM_STREAMS[EVENT_INITIAL_ASSESMENT]), MIN_DURATION),
                                 EVENT_INITIAL_ASSESMENT);
+                    break;
                 }
 
                 /* Remove patient from list of active patients */
@@ -335,9 +336,12 @@ int main(int argc, char** argv)  /* Main function. */
                 /* Increment number of patients simulated */
                 num_patients_simulated++;
                 break;
-            case EVENT_PATIENT_ADMITTANCE:
+            case EVENT_PATIENT_DISCHARGE:
                 /* Remove patient from list of active patients */
                 list_remove(FIRST, LIST_ACTIVE_PATIENTS);
+
+                /* Remove hospital room from list of hospital rooms */
+                list_remove(FIRST, LIST_ACTIVE_HOSPITAL_ROOMS);
 
                 /* Increment number of patients simulated */
                 num_patients_simulated++;
