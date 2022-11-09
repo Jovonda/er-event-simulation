@@ -47,10 +47,10 @@ int main(int argc, char** argv)  /* Main function. */
     /* Verify correct number of arguments. */
     if (argc != 18)
     {
-        printf("USAGE ERROR: Usage %s [mean_walkin_arrival] [mean_ambulance_arrival] [mean_triage_duration]\n\ 
-[mean_initial_assessment_duration] [mean_test_duration] [mean_follow_up_assessment_duration]\n\ 
-[mean_severity] [num_doctors] [num_nurses] [num_exam_rooms] [num_labs] [num_hospital_rooms]\n\ 
-[min_patients_simulated] [output_file_name]\n", argv[0]);
+        printf("USAGE ERROR: Usage %s [mean_walkin_arrival] [mean_ambulance_arrival] [mean_triage_duration]\n\
+[mean_initial_assessment_duration] [mean_test_duration] [mean_follow_up_assessment_duration] [mean_hospital_duration]\n\
+[mean_severity] [num_doctors] [num_nurses] [num_exam_rooms] [num_labs] [num_hospital_rooms] [addmittance_chance]\n\
+[specialist_chance] [goal_patients_simulated] [output_file_name]\n", argv[0]);
         exit(1);
     }
 
@@ -90,7 +90,7 @@ int main(int argc, char** argv)  /* Main function. */
         exit(3);
     }
     strcpy(outfile_name, "out/");
-    strcat(outfile_name, argv[14]);
+    strcat(outfile_name, argv[17]);
     strcat(outfile_name, ".out");
 
     /* Open Output file. */
@@ -106,25 +106,28 @@ int main(int argc, char** argv)  /* Main function. */
     try_output(fprintf(outfile, "            Emergency Room Simulation using Simlib\n"));
     try_output(fprintf(outfile, "--------------------------------------------------------------\n\n"));
     try_output(fprintf(outfile, "[CONSTANTS]\n\n"));
-    try_output(fprintf(outfile, "Ambulance severity multiplier:%20f\n\n", AMBULANCE_SEVERITY));
-    try_output(fprintf(outfile, "Maximum capacity of ER:%20d\n\n", MAX_NUM_PATIENTS));
-    try_output(fprintf(outfile, "Minimum duration of any process:%20.3f\n\n\n", MIN_DURATION));
+    try_output(fprintf(outfile, "Ambulance severity multiplier:%20.3f\n\n", AMBULANCE_SEVERITY));
+    try_output(fprintf(outfile, "Maximum capacity of ER:%27d\n\n", MAX_NUM_PATIENTS));
+    try_output(fprintf(outfile, "Minimum duration of any process:%18.3f\n\n\n", MIN_DURATION));
     try_output(fprintf(outfile, "[INPUT PARAMETERS]\n\n"));
-    try_output(fprintf(outfile, "Mean walk-in arrival rate:%20.3f patients per minute\n\n",
+    try_output(fprintf(outfile, "Mean walk-in arrival rate:%24.3f patients per minute\n\n",
             1.0/mean_walkin_interarrival));
-    try_output(fprintf(outfile, "Mean ambulance arrival rate:%20.3f patients per minute\n\n",
+    try_output(fprintf(outfile, "Mean ambulance arrival rate:%22.3f patients per minute\n\n",
             1.0/mean_ambulance_interarrival));
-    try_output(fprintf(outfile, "Mean triage duration:%20.3f minutes\n\n", mean_triage_duration));
-    try_output(fprintf(outfile, "Mean initial assessment duration:%20.3f minutes\n\n", mean_initial_assessment_duration));
-    try_output(fprintf(outfile, "Mean test duration:%20.3f minutes\n\n", mean_test_duration));
-    try_output(fprintf(outfile, "Mean follow-up assessment duration:%20.3f minutes\n\n", mean_follow_up_assessment_duration));
-    try_output(fprintf(outfile, "Mean patient severity:%20.3f\n\n", mean_severity));
-    try_output(fprintf(outfile, "Number of doctors available:%20d\n\n", num_doctors));
-    try_output(fprintf(outfile, "Number of nurses available:%20d\n\n", num_nurses));
-    try_output(fprintf(outfile, "Number of exam rooms available:%20d\n\n", num_exam_rooms));
-    try_output(fprintf(outfile, "Number of labs available:%20d\n\n", num_labs));
-    try_output(fprintf(outfile, "Number of hospital rooms available:%20d\n\n", num_hospital_rooms));
-    try_output(fprintf(outfile, "Number of patients to simulate:%20d\n\n\n", goal_patients_simulated));
+    try_output(fprintf(outfile, "Mean triage duration:%29.3f minutes\n\n", mean_triage_duration));
+    try_output(fprintf(outfile, "Mean initial assessment duration:%17.3f minutes\n\n", mean_initial_assessment_duration));
+    try_output(fprintf(outfile, "Mean test duration:%31.3f minutes\n\n", mean_test_duration));
+    try_output(fprintf(outfile, "Mean follow-up assessment duration:%15.3f minutes\n\n", mean_follow_up_assessment_duration));
+    try_output(fprintf(outfile, "Mean hospital stay duration:%22.3f minutes\n\n", mean_hospital_duration));
+    try_output(fprintf(outfile, "Mean patient severity:%28.3f\n\n", mean_severity));
+    try_output(fprintf(outfile, "Number of doctors available:%22d\n\n", num_doctors));
+    try_output(fprintf(outfile, "Number of nurses available:%23d\n\n", num_nurses));
+    try_output(fprintf(outfile, "Number of exam rooms available:%19d\n\n", num_exam_rooms));
+    try_output(fprintf(outfile, "Number of labs available:%25d\n\n", num_labs));
+    try_output(fprintf(outfile, "Number of hospital rooms available:%15d\n\n", num_hospital_rooms));
+    try_output(fprintf(outfile, "Chance to be admitted to the hospital:%12.3f\n\n", addmittance_chance));
+    try_output(fprintf(outfile, "Chance to see a specialist:%23.3f\n\n", specialist_chance));
+    try_output(fprintf(outfile, "Number of patients to simulate:%19d\n\n\n", goal_patients_simulated));
     
 
     /* Initialize simlib */
@@ -389,16 +392,18 @@ void report(void)  /* Report generator function. */
 {
     /* Get and write out estimates of desired measures of performance. */
     try_output(fprintf(outfile, "[PERFORMANCE METRICS]\n"));
-    try_output(fprintf(outfile, "\nAverage Number of Active Patients:%10.1f\n", 
+    try_output(fprintf(outfile, "\nAverage Number of Active Patients:%16.1f patients\n", 
                filest(LIST_ACTIVE_PATIENTS)));
-    try_output(fprintf(outfile, "\nNurse Utilization:%14.1f%%\n", 
-               100.0 * filest(LIST_ACTIVE_NURSES) / num_nurses));
-    // try_output(fprintf(outfile, "\nHandoff Dropping Probability:%14.1f%%\n\n", 
-    //            100.0 * total_handoffs_rejected / (total_handoffs_connected + total_handoffs_rejected)));
-    // try_output(fprintf(outfile, "\n[TERMINATION METRICS]\n"));
-    // try_output(fprintf(outfile, "\nTime simulation ended:%21.3f seconds\n", sim_time));
-    // try_output(fprintf(outfile, "\nTotal calls simulated:%21d calls\n", 
-    //            total_calls_connected + total_calls_rejected + total_handoffs_connected + total_handoffs_rejected));
+    try_output(fprintf(outfile, "\nAverage Number of Active Doctors:%17.1f doctors\n", 
+               filest(LIST_ACTIVE_DOCTORS)));
+    try_output(fprintf(outfile, "\nAverage Number of Active Nurses:%18.1f nurses\n", 
+               filest(LIST_ACTIVE_NURSES)));
+    try_output(fprintf(outfile, "\nAverage Number of Active Exam Rooms:%14.1f rooms\n", 
+               filest(LIST_ACTIVE_EXAM_ROOMS)));
+    try_output(fprintf(outfile, "\nAverage Number of Active Labs:%20.1f labs\n", 
+               filest(LIST_ACTIVE_LABS)));
+    try_output(fprintf(outfile, "\nAverage Number of Active Hospital Rooms:%10.1f rooms\n", 
+               filest(LIST_ACTIVE_HOSPITAL_ROOMS)));
 }
 
 void try_input(float input, char* input_str) /* Validate input or exit */

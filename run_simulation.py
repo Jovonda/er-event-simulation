@@ -2,7 +2,7 @@
 import subprocess
 
 INPUTFILE = "er_sim.in"
-NUMARGS = 13
+NUMARGS = 17
 SIMPROGRAM = "build/er_sim"
 
 simulations = []
