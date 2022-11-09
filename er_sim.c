@@ -14,17 +14,22 @@
 #define LIST_ACTIVE_PATIENTS          1  /* List number for tracking active patients */
 #define LIST_ACTIVE_NURSES            2  /* List number for tracking active nurses */
 #define LIST_ACTIVE_DOCTORS           3  /* List number for tracking active doctors */
+#define LIST_ACTIVE_EXAM_ROOMS        4  /* List number for tracking active exam rooms */
+#define LIST_ACTIVE_LABS              5  /* List number for tracking active labs */
+#define LIST_ACTIVE_HOSPITAL_ROOMS    6  /* List number for tracking active hospital rooms */
 #define AMBULANCE_SEVERITY         1.25  /* Ambulance severity multiplier */
 #define MAX_NUM_PATIENTS	        100  /* Maximum number of patients in the ER */
 #define FILENAME_LIMIT               50  /* Limit filename size */
 #define MIN_DURATION                0.1  /* Minimum duration of any process */
+#define TRESHOLD_SEVERITY             4  /* Sets the level of severity to be seen immediately */
 
 /* Declare non-simlib global variables. */
 int    RANDOM_STREAMS[8], num_patients_simulated;
 int    num_doctors, num_exam_rooms, num_nurses, num_labs, num_hospital_rooms, goal_patients_simulated; 
 float  mean_walkin_interarrival, mean_ambulance_interarrival, mean_triage_duration, 
        mean_initial_assessment_duration, mean_follow_up_assessment_duration, 
-       mean_test_duration, mean_severity;
+       mean_test_duration, mean_hospital_duration, mean_severity;
+float  addmittance_chance, specialist_chance, severity, random_var;
 FILE*  outfile;
 char   outfile_name[FILENAME_LIMIT];
 char   error_msg[100];
@@ -40,7 +45,7 @@ void report(void);
 int main(int argc, char** argv)  /* Main function. */
 {
     /* Verify correct number of arguments. */
-    if (argc != 15)
+    if (argc != 18)
     {
         printf("USAGE ERROR: Usage %s [mean_walkin_arrival] [mean_ambulance_arrival] [mean_triage_duration]\n\ 
 [mean_initial_assessment_duration] [mean_test_duration] [mean_follow_up_assessment_duration]\n\ 
@@ -56,20 +61,30 @@ int main(int argc, char** argv)  /* Main function. */
     try_input(mean_initial_assessment_duration = atof(argv[4]), argv[4]);
     try_input(mean_test_duration = atof(argv[5]), argv[5]);
     try_input(mean_follow_up_assessment_duration = atof(argv[6]), argv[6]);
-    try_input(mean_severity = atof(argv[7]), argv[7]);
-    try_input((float)(num_doctors = atoi(argv[8])), argv[8]);
-    try_input((float)(num_nurses = atoi(argv[9])), argv[9]);
-    try_input((float)(num_exam_rooms = atoi(argv[10])), argv[10]);
-    try_input((float)(num_labs = atoi(argv[11])), argv[11]);
-    try_input((float)(num_hospital_rooms = atoi(argv[12])), argv[12]);
-    try_input((float)(goal_patients_simulated = atoi(argv[13])), argv[13]);
+    try_input(mean_hospital_duration = atof(argv[7]), argv[7]);
+    try_input(mean_severity = atof(argv[8]), argv[8]);
+    try_input((float)(num_doctors = atoi(argv[9])), argv[9]);
+    try_input((float)(num_nurses = atoi(argv[10])), argv[10]);
+    try_input((float)(num_exam_rooms = atoi(argv[11])), argv[11]);
+    try_input((float)(num_labs = atoi(argv[12])), argv[12]);
+    try_input((float)(num_hospital_rooms = atoi(argv[13])), argv[13]);
+    try_input(addmittance_chance = atof(argv[14]), argv[14]);
+    try_input(specialist_chance = atof(argv[15]), argv[15]);
+    try_input((float)(goal_patients_simulated = atoi(argv[16])), argv[16]);
 
     /* Calculate mean walk-in interarrival and mean ambulance interarrival time */
     mean_walkin_interarrival = 1.0 / mean_walkin_interarrival;
     mean_ambulance_interarrival = 1.0 / mean_ambulance_interarrival;
 
+    /* Verify probability adds to 1 for what can happen to a patient in EVENT_FOLLOW_UP_ASSESSMENT */
+    if (addmittance_chance + specialist_chance >= 1)
+    {
+        sprintf(error_msg, "PROBABILITY ERROR: Addmittance Chance And Specialist Chance Sum >= 1\n");
+        catch_exception(error_msg, 11);
+    }
+
     /* Verify that outfile_name is within the FILENAME_LIMIT */
-    if (strlen(argv[14]) + 8 >= FILENAME_LIMIT)
+    if (strlen(argv[17]) + 8 >= FILENAME_LIMIT)
     {
         printf("FILENAME ERROR: Filename Too Long\n");
         exit(3);
@@ -122,7 +137,7 @@ int main(int argc, char** argv)  /* Main function. */
     init_model();
 
     /* Run the simulation while more calls are still needed. */
-    while (num_patients_simulated < goal_patients_simulated) {
+    while (num_patients_simulated <= goal_patients_simulated) {
 
         /* Determine the next event. */
         timing();
@@ -134,9 +149,9 @@ int main(int argc, char** argv)  /* Main function. */
                 list_file(FIRST, LIST_ACTIVE_PATIENTS);
                 
                 /* Validate number of patients in the ER */
-                if (list_size[LIST_ACTIVE_PATIENTS] >= MAX_NUM_PATIENTS) 
+                if (list_size[LIST_ACTIVE_PATIENTS] > MAX_NUM_PATIENTS) 
                 {
-                    sprintf(error_msg, "PATIENT VOLUME ERROR: Patients In ER Exceeded %d\n", MAX_NUM_PATIENTS);
+                    sprintf(error_msg, "PATIENT ERROR: Patients In ER Exceeded %d\n", MAX_NUM_PATIENTS);
                     catch_exception(error_msg, 6);
                 }
 
@@ -149,7 +164,7 @@ int main(int argc, char** argv)  /* Main function. */
                 list_file(FIRST, LIST_ACTIVE_NURSES);
 
                 /* Validate number of nurses in the ER */
-                if (list_size[LIST_ACTIVE_NURSES] >= num_nurses)
+                if (list_size[LIST_ACTIVE_NURSES] > num_nurses)
                 {
                     sprintf(error_msg, "NURSE ERROR: Number Of Active Nurses Exceeded %d\n", num_nurses);
                     catch_exception(error_msg, 7);
@@ -164,9 +179,9 @@ int main(int argc, char** argv)  /* Main function. */
                 list_file(FIRST, LIST_ACTIVE_PATIENTS);
                 
                 /* Validate number of patients in the ER */
-                if (list_size[LIST_ACTIVE_PATIENTS] >= MAX_NUM_PATIENTS) 
+                if (list_size[LIST_ACTIVE_PATIENTS] > MAX_NUM_PATIENTS) 
                 {
-                    sprintf(error_msg, "PATIENT VOLUME ERROR: Patients In ER Exceeded %d\n", MAX_NUM_PATIENTS);
+                    sprintf(error_msg, "PATIENT  ERROR: Patients In ER Exceeded %d\n", MAX_NUM_PATIENTS);
                     catch_exception(error_msg, 6);
                 }
                 
@@ -179,7 +194,7 @@ int main(int argc, char** argv)  /* Main function. */
                 list_file(FIRST, LIST_ACTIVE_NURSES);
 
                 /* Validate number of nurses in the ER */
-                if (list_size[LIST_ACTIVE_NURSES] >= num_nurses)
+                if (list_size[LIST_ACTIVE_NURSES] > num_nurses)
                 {
                     sprintf(error_msg, "NURSE ERROR: Number Of Active Nurses Exceeded %d\n", num_nurses);
                     catch_exception(error_msg, 7);
@@ -196,22 +211,136 @@ int main(int argc, char** argv)  /* Main function. */
                 /* Add doctor to list of active doctors */
                 list_file(FIRST, LIST_ACTIVE_DOCTORS);
 
-                /* Schedule patient's initial assessment */
-                event_schedule(sim_time + fmaxf(normal(mean_initial_assessment_duration, RANDOM_STREAMS[EVENT_INITIAL_ASSESMENT]), MIN_DURATION),
+                /* Validate number of doctors in the ER */
+                if (list_size[LIST_ACTIVE_DOCTORS] > num_doctors) 
+                {
+                    sprintf(error_msg, "DOCTOR ERROR: Number of Active Doctors Exceeded %d\n", num_doctors);
+                    catch_exception(error_msg, 8);
+                }
+
+                /* Add exam room to list of active exam rooms */
+                list_file(FIRST, LIST_ACTIVE_EXAM_ROOMS);
+
+                /* Validate number of exam rooms in the ER */
+                if (list_size[LIST_ACTIVE_EXAM_ROOMS] > num_exam_rooms) 
+                {
+                    sprintf(error_msg, "EXAM ROOM ERROR: Number Of Active Exam Rooms Exceeded %d\n", num_exam_rooms);
+                    catch_exception(error_msg, 9);
+                }
+
+                /* Generate patient severity to determine if they will be seen immediately */
+                severity = normal(mean_severity, RANDOM_STREAMS[EVENT_TRIAGE_PATIENT]);
+                if (severity < TRESHOLD_SEVERITY)
+                {
+                    /* Schedule patient's initial assessment */
+                    event_schedule(sim_time + fmaxf(normal(mean_initial_assessment_duration, RANDOM_STREAMS[EVENT_INITIAL_ASSESMENT]), MIN_DURATION),
+                                EVENT_INITIAL_ASSESMENT);
+                }
+
+                /* Schedule patient's initial assessment immediately */
+                event_schedule(sim_time + MIN_DURATION,
                                EVENT_INITIAL_ASSESMENT);
                 break;
             case EVENT_INITIAL_ASSESMENT:
-                list_remove(FIRST, LIST_ACTIVE_PATIENTS);
-                num_patients_simulated++;
+                /* Remove exam room from list of active exam rooms */
+                list_remove(FIRST, LIST_ACTIVE_EXAM_ROOMS);
+
+                /* Add lab to list of active labs */
+                list_file(FIRST, LIST_ACTIVE_LABS);
+
+                /* Validate number of labs in the ER */
+                if (list_size[LIST_ACTIVE_LABS] > num_labs) 
+                {
+                    sprintf(error_msg, "LAB ERROR: Number Of Active Labs Exceeded %d\n", num_labs);
+                    catch_exception(error_msg, 10);
+                }
+
+                /* Schedule tests to be run */
+                event_schedule(sim_time + fmaxf(normal(mean_test_duration, RANDOM_STREAMS[EVENT_RUN_TESTS]), MIN_DURATION),
+                               EVENT_RUN_TESTS);
                 break;
             case EVENT_RUN_TESTS:
+                /* Remove lab from list of active labs */
+                list_remove(FIRST, LIST_ACTIVE_LABS);
+
+                /* Add exam room to list of active exam rooms */
+                list_file(FIRST, LIST_ACTIVE_EXAM_ROOMS);
+
+                /* Validate number of exam rooms in the ER */
+                if (list_size[LIST_ACTIVE_EXAM_ROOMS] > num_exam_rooms) 
+                {
+                    sprintf(error_msg, "EXAM ROOM ERROR: Number Of Active Exam Rooms Exceeded %d\n", num_exam_rooms);
+                    catch_exception(error_msg, 9);
+                }
                 
+                /* Schedule tests to be run */
+                event_schedule(sim_time + fmaxf(normal(mean_follow_up_assessment_duration, RANDOM_STREAMS[EVENT_FOLLOW_UP_ASSESSMENT]), MIN_DURATION),
+                               EVENT_FOLLOW_UP_ASSESSMENT);
                 break;
             case EVENT_FOLLOW_UP_ASSESSMENT:
+                /* Remove exam room from list of active exam rooms */
+                list_remove(FIRST, LIST_ACTIVE_EXAM_ROOMS);
                 
+                /* Remove doctor from list of active doctors */
+                list_remove(FIRST, LIST_ACTIVE_DOCTORS);
+                
+                /* Generate random variable for selecting patient outcome */
+                random_var = uniform(0, 1, RANDOM_STREAMS[EVENT_FOLLOW_UP_ASSESSMENT]);
+                if (random_var <= addmittance_chance)
+                {
+                    /* Add hospital room to list of active hospital rooms */
+                    list_file(FIRST, LIST_ACTIVE_HOSPITAL_ROOMS);
+
+                    /* Validate number of exam rooms in the ER */
+                    if (list_size[LIST_ACTIVE_HOSPITAL_ROOMS] > num_hospital_rooms) 
+                    {
+                        sprintf(error_msg, "HOSPITAL ROOM ERROR: Number Of Active Hospital Rooms Exceeded %d\n", num_exam_rooms);
+                        catch_exception(error_msg, 12);
+                    }
+
+                    /* Schedule patient addmittance to hospital */
+                    event_schedule(sim_time + fmaxf(normal(mean_hospital_duration, RANDOM_STREAMS[EVENT_PATIENT_ADMITTANCE]), MIN_DURATION),
+                               EVENT_PATIENT_ADMITTANCE);
+                }
+                else if (random_var - addmittance_chance <= specialist_chance)
+                {
+                    /* Add doctor to list of active doctors */
+                    list_file(FIRST, LIST_ACTIVE_DOCTORS);
+
+                    /* Validate number of doctors in the ER */
+                    if (list_size[LIST_ACTIVE_DOCTORS] > num_doctors) 
+                    {
+                        sprintf(error_msg, "DOCTOR ERROR: Number of Active Doctors Exceeded %d\n", num_doctors);
+                        catch_exception(error_msg, 8);
+                    }
+
+                    /* Add exam room to list of active exam rooms */
+                    list_file(FIRST, LIST_ACTIVE_EXAM_ROOMS);
+
+                    /* Validate number of exam rooms in the ER */
+                    if (list_size[LIST_ACTIVE_EXAM_ROOMS] > num_exam_rooms) 
+                    {
+                        sprintf(error_msg, "EXAM ROOM ERROR: Number Of Active Exam Rooms Exceeded %d\n", num_exam_rooms);
+                        catch_exception(error_msg, 9);
+                    }
+
+                    /* Schedule patient's specialist initial assessment */
+                    event_schedule(sim_time + fmaxf(normal(mean_initial_assessment_duration, RANDOM_STREAMS[EVENT_INITIAL_ASSESMENT]), MIN_DURATION),
+                                EVENT_INITIAL_ASSESMENT);
+                }
+
+                /* Remove patient from list of active patients */
+                list_remove(FIRST, LIST_ACTIVE_PATIENTS);
+                
+                /* Increment number of patients simulated */
+                num_patients_simulated++;
                 break;
             case EVENT_PATIENT_ADMITTANCE:
+                /* Remove patient from list of active patients */
+                list_remove(FIRST, LIST_ACTIVE_PATIENTS);
 
+                /* Increment number of patients simulated */
+                num_patients_simulated++;
                 break;
         }
     }
@@ -244,7 +373,7 @@ void init_model(void)  /* Initialization function. */
     RANDOM_STREAMS[6] = 13 * seconds % 60;
     RANDOM_STREAMS[7] = 17 * seconds % 60;
     
-    /* Schedule first new call and first handoff call */
+    /* Schedule first walk-in and first ambulance patient */
     event_schedule(sim_time + expon(mean_walkin_interarrival, RANDOM_STREAMS[EVENT_WALKIN_ARRIVAL]),
                    EVENT_WALKIN_ARRIVAL);
     event_schedule(sim_time + expon(mean_ambulance_interarrival, RANDOM_STREAMS[EVENT_AMBULANCE_ARRIVAL]),
