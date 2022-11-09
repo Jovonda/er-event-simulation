@@ -183,7 +183,7 @@ int main(int argc, char** argv)  /* Main function. */
                 /* Validate number of patients in the ER */
                 if (list_size[LIST_ACTIVE_PATIENTS] > MAX_NUM_PATIENTS) 
                 {
-                    sprintf(error_msg, "PATIENT  ERROR: Patients In ER Exceeded %d\n", MAX_NUM_PATIENTS);
+                    sprintf(error_msg, "PATIENT ERROR: Patients In ER Exceeded %d\n", MAX_NUM_PATIENTS);
                     catch_exception(error_msg, 6);
                 }
                 
