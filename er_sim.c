@@ -17,7 +17,7 @@
 #define LIST_ACTIVE_EXAM_ROOMS        4  /* List number for tracking active exam rooms */
 #define LIST_ACTIVE_LABS              5  /* List number for tracking active labs */
 #define LIST_ACTIVE_HOSPITAL_ROOMS    6  /* List number for tracking active hospital rooms */
-#define MAX_NUM_PATIENTS	        100  /* Maximum number of patients in the ER */
+#define MAX_NUM_PATIENTS            100  /* Maximum number of patients in the ER */
 #define FILENAME_LIMIT               50  /* Limit filename size */
 #define MIN_DURATION                0.1  /* Minimum duration of any process */
 #define THRESHOLD_SEVERITY            4  /* Sets the level of severity to be seen immediately */
